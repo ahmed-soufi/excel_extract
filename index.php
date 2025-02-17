@@ -8,9 +8,20 @@ $folder ="./departure"; // folder path
 
 $files = glob($folder."/*.xlsx"); // get all file names in the folder
 
-$dataList = []; // array to store all data
+$dataListvoyage = []; // array to store all data
+$datalistdeparture= [];
 
 $sheetName = "DEPARTURE"; // sheet name
+
+function dateConvert($date){
+    // Extract day, month, and year from the date string
+    $day = substr($date, 0, 1);
+    $month = substr($date, 1, 2);
+    $year = substr($date, 3, 4);
+
+    // Format the date as YYYYMMDD
+    return $year . $month . str_pad($day, 2, '0', STR_PAD_LEFT);
+}
 
 $cells = [
     "Voyage reference" => "B5",
@@ -85,16 +96,66 @@ $reader = new Xlsx();
     foreach ($voyage as $key => $cell) {
         $data[$key] = $sheet->getCell($cell)->getValue();
     }// Get the cell value
+    $dataListvoyage[] = $data;
     foreach ($departure as $key => $cell) {
         $data[$key] = $sheet->getCell($cell)->getValue();
     }// Get the cell value
-    $dataList[] = $data;
+    $datalistdeparture[] = $data;
     break;
  }
+$dataListvoyage[0]["date_departure"] = dateConvert($dataListvoyage[0]["date_departure"]);
+$host = "localhost";
+$db = "c2i";
+$user = "root";
+$pwd = "";
+$dsn = "mysql:host=$host;dbname=$db";
+$option =[
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+];
 
- foreach ($dataList as $data) {
+try {
+    $pdo = new PDO($dsn, $user, $pwd,$option);
+} catch (PDOException $e) {
+    echo $e->getMessage();
+}
+
+
+
+
+foreach ($dataListvoyage as $data) {
+    $sql = "INSERT INTO voyages (dcs_number, date_departure, time_departure, time_zone_departure, id_port_depart, id_port_arrival) VALUES (:dcs_number, :date_departure, :time_departure, :time_zone_departure, :id_port_depart, :id_port_arrival)";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($data);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ foreach ($dataListvoyage as $data) {
     echo "<pre>";
     print_r($data);
     echo "</pre>";
     
  }
+//  foreach ($datalistdeparture as $data) {
+//     echo "<pre>";
+//     print_r($data);
+//     echo "</pre>";
+    
+//  }
+

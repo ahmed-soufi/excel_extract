@@ -14,15 +14,25 @@ $datalistdeparture = [];
 
 $sheetName = "DEPARTURE"; // sheet name
 
+
 function dateConvert($date)
 {
-    // Extract day, month, and year from the date string
-    $day = substr($date, 0, 1);
-    $month = substr($date, 1, 2);
-    $year = substr($date, 3, 4);
+    if (strlen($date) == 7) {
+        // Extract day, month, and year from the date string
+        $day = substr($date, 0, 1);
+        $month = substr($date, 1, 2);
+        $year = substr($date, 3, 4);
 
-    // Format the date as YYYYMMDD
-    return $year . $month . str_pad($day, 2, '0', STR_PAD_LEFT);
+        // Format the date as YYYYMMDD
+        return $year . $month . str_pad($day, 2, '0', STR_PAD_LEFT);
+    } else {
+        if (strlen($date) == 8) {
+            $day = substr($date, 0, 2);
+            $month = substr($date, 2, 2);
+            $year = substr($date, 4, 4);
+            return $year.$month.$day;
+        }
+    }
 }
 
 $cells = [
@@ -87,6 +97,7 @@ $departure = [
 
 
 $reader = new Xlsx();
+$i=0;
 foreach ($files as $file) {
     // Skip temporary or hidden files
     if (strpos(basename($file), '~$') === 0) {
@@ -103,9 +114,10 @@ foreach ($files as $file) {
         $data[$key] = $sheet->getCell($cell)->getValue();
     } // Get the cell value
     $datalistdeparture[] = $data;
-    break;
+    $dataListvoyage[$i]["date_departure"] = dateConvert($dataListvoyage[$i]["date_departure"]);
+    $i++;
+   // break;
 }
-$dataListvoyage[0]["date_departure"] = dateConvert($dataListvoyage[0]["date_departure"]);
 
 
 
@@ -134,32 +146,36 @@ $vessel = "1";
 // userid
 $user = "1";
 
-//getting departure and arrival ports ids
-//id port depart
-$sql = "select id_port from ports where code_port = :code_port";
-$stmt = $pdo->prepare($sql);
-$stmt->execute(["code_port" => $dataListvoyage[0]["id_port_depart"]]);
-$id_port_depart = $stmt->fetch()["id_port"];
-$dataListvoyage[0]["id_port_depart"] = $id_port_depart;
-//id port arrival
-$stmt->execute(["code_port" => $dataListvoyage[0]["id_port_arrival"]]);
-$id_port_arrival = $stmt->fetch()["id_port"];
-$dataListvoyage[0]["id_port_arrival"] = $id_port_arrival;
-
 // creating the new voyage
-foreach ($dataListvoyage as $data) {
+for ($i = 0; $i < count($dataListvoyage); $i++) {
+
+    //getting departure and arrival ports ids
+    //id port depart
+    $sql = "select id_port from ports where code_port = :code_port";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(["code_port" => $dataListvoyage[$i]["id_port_depart"]]);
+    $id_port_depart = $stmt->fetch()["id_port"];
+    $dataListvoyage[$i]["id_port_depart"] = $id_port_depart;
+    //id port arrival
+    $stmt->execute(["code_port" => $dataListvoyage[$i]["id_port_arrival"]]);
+    $id_port_arrival = $stmt->fetch()["id_port"];
+    $dataListvoyage[$i]["id_port_arrival"] = $id_port_arrival;
+
     $sql = "INSERT INTO voyages (dcs_number, date_departure, time_departure, time_zone_departure, id_port_depart, id_port_arrival) VALUES (:dcs_number, :date_departure, :time_departure, :time_zone_departure, :id_port_depart, :id_port_arrival)";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($data);
+    $stmt->execute($dataListvoyage[$i]);
+    $datalistdeparture[$i]["id_trv"] = $pdo->lastInsertId();
 }
 
-print_r($pdo->lastInsertId());
+
+
+
 
 // now getting ids for the departure report
 
-foreach ($datalistdeparture as $data){
-    $data["id_trv"] = $pdo->lastInsertId();
-}
+// foreach ($datalistdeparture as $data){
+//     $data["id_trv"] = $pdo->lastInsertId();
+// }
 
 
 
@@ -183,9 +199,8 @@ foreach ($dataListvoyage as $data) {
     print_r($data);
     echo "</pre>";
 }
-//  foreach ($datalistdeparture as $data) {
-//     echo "<pre>";
-//     print_r($data);
-//     echo "</pre>";
-    
-//  }
+foreach ($datalistdeparture as $data) {
+    echo "<pre>";
+    print_r($data);
+    echo "</pre>";
+}

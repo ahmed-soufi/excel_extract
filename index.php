@@ -1,19 +1,21 @@
 <?php
 
 require 'vendor/autoload.php';
+
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
-$folder ="./departure"; // folder path
+$folder = "./departure"; // folder path
 
-$files = glob($folder."/*.xlsx"); // get all file names in the folder
+$files = glob($folder . "/*.xlsx"); // get all file names in the folder
 
 $dataListvoyage = []; // array to store all data
-$datalistdeparture= [];
+$datalistdeparture = [];
 
 $sheetName = "DEPARTURE"; // sheet name
 
-function dateConvert($date){
+function dateConvert($date)
+{
     // Extract day, month, and year from the date string
     $day = substr($date, 0, 1);
     $month = substr($date, 1, 2);
@@ -79,56 +81,85 @@ $departure = [
     "propulsion_stbd" => "J11",
     "propulsion_revo" => "J12",
     "voyplan_eta" => "J14",
-    "voyplan_distancetogo"=> "J15",
+    "voyplan_distancetogo" => "J15",
 ];
 
 
 
 $reader = new Xlsx();
- foreach ($files as $file) {
+foreach ($files as $file) {
     // Skip temporary or hidden files
     if (strpos(basename($file), '~$') === 0) {
         continue;
     }
-    $spreadsheet = $reader->load($file);// Load the excel file
-    $sheet = $spreadsheet->getSheetByName($sheetName);// Get the sheet by name
+    $spreadsheet = $reader->load($file); // Load the excel file
+    $sheet = $spreadsheet->getSheetByName($sheetName); // Get the sheet by name
     $data = [];
     foreach ($voyage as $key => $cell) {
         $data[$key] = $sheet->getCell($cell)->getValue();
-    }// Get the cell value
+    } // Get the cell value
     $dataListvoyage[] = $data;
     foreach ($departure as $key => $cell) {
         $data[$key] = $sheet->getCell($cell)->getValue();
-    }// Get the cell value
+    } // Get the cell value
     $datalistdeparture[] = $data;
     break;
- }
+}
 $dataListvoyage[0]["date_departure"] = dateConvert($dataListvoyage[0]["date_departure"]);
+
+
+
 $host = "localhost";
 $db = "c2i";
 $user = "root";
 $pwd = "";
 $dsn = "mysql:host=$host;dbname=$db";
-$option =[
+$option = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
 ];
 
 try {
-    $pdo = new PDO($dsn, $user, $pwd,$option);
+    $pdo = new PDO($dsn, $user, $pwd, $option);
 } catch (PDOException $e) {
     echo $e->getMessage();
 }
 
 
+// getting data from external tables to repoport departure and voyages.
+// vessel
+$vessel = "1";
 
 
+// userid
+$user = "1";
+
+//getting departure and arrival ports ids
+//id port depart
+$sql = "select id_port from ports where code_port = :code_port";
+$stmt = $pdo->prepare($sql);
+$stmt->execute(["code_port" => $dataListvoyage[0]["id_port_depart"]]);
+$id_port_depart = $stmt->fetch()["id_port"];
+$dataListvoyage[0]["id_port_depart"] = $id_port_depart;
+//id port arrival
+$stmt->execute(["code_port" => $dataListvoyage[0]["id_port_arrival"]]);
+$id_port_arrival = $stmt->fetch()["id_port"];
+$dataListvoyage[0]["id_port_arrival"] = $id_port_arrival;
+
+// creating the new voyage
 foreach ($dataListvoyage as $data) {
     $sql = "INSERT INTO voyages (dcs_number, date_departure, time_departure, time_zone_departure, id_port_depart, id_port_arrival) VALUES (:dcs_number, :date_departure, :time_departure, :time_zone_departure, :id_port_depart, :id_port_arrival)";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($data);
 }
 
+print_r($pdo->lastInsertId());
+
+// now getting ids for the departure report
+
+foreach ($datalistdeparture as $data){
+    $data["id_trv"] = $pdo->lastInsertId();
+}
 
 
 
@@ -146,16 +177,15 @@ foreach ($dataListvoyage as $data) {
 
 
 
- foreach ($dataListvoyage as $data) {
+
+foreach ($dataListvoyage as $data) {
     echo "<pre>";
     print_r($data);
     echo "</pre>";
-    
- }
+}
 //  foreach ($datalistdeparture as $data) {
 //     echo "<pre>";
 //     print_r($data);
 //     echo "</pre>";
     
 //  }
-

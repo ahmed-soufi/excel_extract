@@ -30,24 +30,12 @@ function dateConvert($date)
             $day = substr($date, 0, 2);
             $month = substr($date, 2, 2);
             $year = substr($date, 4, 4);
-            return $year.$month.$day;
+            return $year . $month . $day;
         }
     }
 }
 
-$cells = [
-    "Voyage reference" => "B5",
-    "DCS Voyage N°" => "B6",
-    "Departure Port" => "B7",
-    "Destination Port" => "B8",
-    "Type Of Next Call" => "B9",
-    "UK/EU Port?" => "B10",
-    "Left Berth Date" => "B11",
-    "Left Berth Local Time" => "B12",
-    "Left Berth  Time-zone  " => "C12",
-    "GPS trip counter " => "B13",
-    "Speed log trip counter" => "B14",
-];
+
 
 
 $voyage = [
@@ -75,7 +63,7 @@ $departure = [
     "depdata_total_cargo_onboard" => "B17",
     "weath_wind_force" => "F5",
     "weath_sea_state" => "F6",
-    "weat_bfrt" => "F7",
+    "weath_bfrt" => "F7",
     "fg_to_boilers" => "F9",
     "fg_to_dfde1" => "F10",
     "fg_to_dfde2" => "F11",
@@ -97,7 +85,7 @@ $departure = [
 
 
 $reader = new Xlsx();
-$i=0;
+$i = 0;
 foreach ($files as $file) {
     // Skip temporary or hidden files
     if (strpos(basename($file), '~$') === 0) {
@@ -110,13 +98,15 @@ foreach ($files as $file) {
         $data[$key] = $sheet->getCell($cell)->getValue();
     } // Get the cell value
     $dataListvoyage[] = $data;
+    $data = [];
     foreach ($departure as $key => $cell) {
         $data[$key] = $sheet->getCell($cell)->getValue();
     } // Get the cell value
     $datalistdeparture[] = $data;
     $dataListvoyage[$i]["date_departure"] = dateConvert($dataListvoyage[$i]["date_departure"]);
+    $datalistdeparture[$i]["depdata_date"] = dateConvert($datalistdeparture[$i]["depdata_date"]);
     $i++;
-   // break;
+    // break;
 }
 
 
@@ -160,12 +150,85 @@ for ($i = 0; $i < count($dataListvoyage); $i++) {
     $stmt->execute(["code_port" => $dataListvoyage[$i]["id_port_arrival"]]);
     $id_port_arrival = $stmt->fetch()["id_port"];
     $dataListvoyage[$i]["id_port_arrival"] = $id_port_arrival;
-
+    //voyaage insertion
     $sql = "INSERT INTO voyages (dcs_number, date_departure, time_departure, time_zone_departure, id_port_depart, id_port_arrival) VALUES (:dcs_number, :date_departure, :time_departure, :time_zone_departure, :id_port_depart, :id_port_arrival)";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($dataListvoyage[$i]);
+    //setting id_trv (voyage) in the departure array
     $datalistdeparture[$i]["id_trv"] = $pdo->lastInsertId();
 }
+
+//preparing and inserting the departure report
+for ($i = 0; $i < count($datalistdeparture); $i++) {
+    //setting the call type
+    $sql = "SELECT * from type_call where type_tcl_name = :call_type";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(["call_type" => $datalistdeparture[$i]["depdata_type"]]);
+    $datalistdeparture[$i]["depdata_type"] = $stmt->fetch()["tcl"];
+
+    //setting the eu/uk/mrv
+    $sql = "SELECT * from mrv_ports where port_type = :eu_uk_mrv";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(["eu_uk_mrv" => $datalistdeparture[$i]["depdata_eu_uk_mrv"]]);
+    $datalistdeparture[$i]["depdata_eu_uk_mrv"] = $stmt->fetch()["mp"];
+
+    // seeting cargo type
+    $sql = "SELECT * from type_cargo where type_name = :cargo_type";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(["cargo_type" => $datalistdeparture[$i]["depdata_type_cargo1"]]);
+    $datalistdeparture[$i]["depdata_type_cargo1"] = $stmt->fetch()["tc"];
+    if ($datalistdeparture[$i]["depdata_type_cargo2"] != null) {
+        $stmt->execute(["cargo_type" => $datalistdeparture[$i]["depdata_type_cargo2"]]);
+        $datalistdeparture[$i]["depdata_type_cargo2"] = $stmt->fetch()["tc"];
+    } else {
+        $datalistdeparture[$i]["depdata_type_cargo2"] = '0';
+    }
+
+    echo $datalistdeparture[$i]["depdata_date"] . "<br>";
+
+    //inserting departure report
+    $sql = "INSERT  into reports_departure SET     
+    depdata_type = :depdata_type,
+    depdata_eu_uk_mrv = :depdata_eu_uk_mrv,
+    depdata_date = :depdata_date,
+    depdata_local_time = :depdata_local_time,
+    depdata_time_zone = :depdata_time_zone,
+    depdata_gps_trip = :depdata_gps_trip,
+    depdata_speed_log_trip = :depdata_speed_log_trip,
+    depdata_type_cargo1 = :depdata_type_cargo1,
+    depdata_type_cargo2 = :depdata_type_cargo2,
+    depdata_total_volume_lng = :depdata_total_volume_lng,
+    depdata_total_cargo_onboard = :depdata_total_cargo_onboard,
+    weath_wind_force = :weath_wind_force,
+    weath_sea_state = :weath_sea_state,
+    weath_bfrt = :weath_bfrt,
+    fg_toboilers = :fg_to_boilers,
+    fg_dfde1 = :fg_to_dfde1, 
+    fg_dfde2 = :fg_to_dfde2,
+    fg_dfde3 = :fg_to_dfde3, 
+    fg_dfde4 = :fg_to_dfde4,
+    fg_gcu = :fg_gcu,
+    fg_vapour_mast = :fg_vapour_mast,
+    lsfo = :lsfo,
+    ulsfo = :ulsfo,
+    mgo = :mgo,
+    lng_ctms = :lng_ctms,
+    lo = :lo,
+    propulsion_stbd = :propulsion_stbd,
+    propulsion_revo = :propulsion_revo,
+    voyplan_eta = :voyplan_eta,
+    voyplan_distancetogo = :voyplan_distancetogo,
+    id_trv = :id_trv";
+    echo "<pre>";
+    print_r($datalistdeparture[$i]);
+    echo "</pre>";
+    echo "<br>";
+    print_r($sql);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($datalistdeparture[$i]);
+}
+
+
 
 
 
@@ -190,17 +253,4 @@ for ($i = 0; $i < count($dataListvoyage); $i++) {
 
 
 
-
-
-
-
-foreach ($dataListvoyage as $data) {
-    echo "<pre>";
-    print_r($data);
-    echo "</pre>";
-}
-foreach ($datalistdeparture as $data) {
-    echo "<pre>";
-    print_r($data);
-    echo "</pre>";
-}
+//

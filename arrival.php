@@ -131,6 +131,7 @@ try {
     echo $e->getMessage();
 }
 
+$i = 0;
 foreach ($dataListarrival as $arrival){
     $sql = " SELECT * FROM voyages where dcs_number = :dcs_number";
     $stmt = $pdo->prepare($sql);    
@@ -140,12 +141,24 @@ foreach ($dataListarrival as $arrival){
         echo "voyage not found";
         continue;
     }
-    $arrival["id_trv"] = $voyage["id_trv"];
+    $dataListarrival[$i]["id_trv"] = $voyage["id_trv"];
     echo "<pre>";   
+    $sql = "UPDATE voyages set 
+                date_arrival = :arr_fwe_date,
+                time_arrival = :arr_fwe_local_time,
+                time_zone_arrival = :arr_fwe_time_zone 
+                where id_trv = :id_trv";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        "arr_fwe_date" => $arrival["arr_fwe_date"],
+        "arr_fwe_local_time" => $arrival["arr_fwe_local_time"],
+        "arr_fwe_time_zone" => $arrival["arr_fwe_time_zone"],
+        "id_trv" => $voyage["id_trv"]
+    ]);
     //echo $arrival["arr_comp_dcs_voy_number"];
     print_r($voyage);
     echo "</pre>";  
-
+    $i++;
 }
 
 

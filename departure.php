@@ -16,6 +16,9 @@ $sheetName = "DEPARTURE"; // sheet name
 
 function dateConvert($date)
 {
+    if($date == null || $date == ""){
+        return "";
+    }
     if (strlen($date) == 7) {
         // Extract day, month, and year from the date string
         $day = substr($date, 0, 1);
@@ -172,7 +175,7 @@ for ($i = 0; $i < count($datalistdeparture); $i++) {
         $datalistdeparture[$i]["depdata_type_cargo2"] = '0';
     }
 
-    echo $datalistdeparture[$i]["depdata_date"] . "<br>";
+    //echo $datalistdeparture[$i]["depdata_date"] . "<br>";
 
     //inserting departure report
     $sql = "INSERT  into reports_departure SET     
@@ -208,11 +211,12 @@ for ($i = 0; $i < count($datalistdeparture); $i++) {
     voyplan_distancetogo = :voyplan_distancetogo,
     id_trv = :id_trv";
     echo "<pre>";
+    echo $i;
     print_r($datalistdeparture[$i]);
     echo "</pre>";
     echo "<br>";
-    print_r($sql);
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($datalistdeparture[$i]);
+    //print_r($sql);
+    // $stmt = $pdo->prepare($sql);
+    // $stmt->execute($datalistdeparture[$i]);
 }
 

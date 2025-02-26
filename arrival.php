@@ -5,6 +5,29 @@ require 'vendor/autoload.php';
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
+function dateConvert($date)
+{
+    if($date == null || $date == ""){
+        return "";
+    }
+    if (strlen($date) == 7) {
+        // Extract day, month, and year from the date string
+        $day = substr($date, 0, 1);
+        $month = substr($date, 1, 2);
+        $year = substr($date, 3, 4);
+
+        // Format the date as YYYYMMDD
+        return $year . $month . str_pad($day, 2, '0', STR_PAD_LEFT);
+    } else {
+        if (strlen($date) == 8) {
+            $day = substr($date, 0, 2);
+            $month = substr($date, 2, 2);
+            $year = substr($date, 4, 4);
+            return $year . $month . $day;
+        }
+    }
+}
+
 $arrivalCells = [
     "arr_calltype" => "B5",
     "arr_comp_dcs_voy_number" => "B6",
@@ -84,8 +107,48 @@ foreach ($files as $file) {
         // echo $key."=>".$cell."<br>";
         $data[$key] = $sheet->getCell($cell)->getValue();
     } // Get the cell value
+    $data["arr_fwe_date"] = dateConvert($data["arr_fwe_date"]);
+    $data["sosp_start_date"] = dateConvert($data["sosp_start_date"]);
+    $data["eosp_date"] = dateConvert($data["eosp_date"]);
+    $data["anchor_date"] = dateConvert($data["anchor_date"]);
+    $data["anchor_up_date"] = dateConvert($data["anchor_up_date"]);
     $dataListarrival[] = $data;
 }
+
+$host = "localhost";
+$db = "c2i";
+$user = "root";
+$pwd = "";
+$dsn = "mysql:host=$host;dbname=$db";
+$option = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+];
+
+try {
+    $pdo = new PDO($dsn, $user, $pwd, $option);
+} catch (PDOException $e) {
+    echo $e->getMessage();
+}
+
+foreach ($dataListarrival as $arrival){
+    $sql = " SELECT * FROM voyages where dcs_number = :dcs_number";
+    $stmt = $pdo->prepare($sql);    
+    $stmt->execute(["dcs_number" => $arrival["arr_comp_dcs_voy_number"]]);
+    $voyage = $stmt->fetch();   
+    if (!$voyage){
+        echo "voyage not found";
+        continue;
+    }
+    $arrival["id_trv"] = $voyage["id_trv"];
+    echo "<pre>";   
+    //echo $arrival["arr_comp_dcs_voy_number"];
+    print_r($voyage);
+    echo "</pre>";  
+
+}
+
+
 
 echo "<pre>";
 print_r($dataListarrival);

@@ -72,7 +72,7 @@ $arrivalCells = [
     "fwe_lng_ctms" => "J8",
     "fwe_lo" => "J9",
     "propulsion_stbd" => "J11",
-    "propulsion_port" => "J12",
+    "propulsion_revo" => "J12",
     "drift_total_distance" => "J14",
     "drift_time_adrift" => "J15",
     "anchor_date" => "J19",
@@ -87,7 +87,7 @@ $arrivalCells = [
 ];
 
 $folder = "./arrival"; // folder path
-$files = glob($folder . "/*.xlsx"); // get all file names in the folder
+$files = glob($folder . "/*.xlsm"); // get all file names in the folder
 $dataListarrival = []; // array to store all data
 $sheetName = "ARRIVAL"; // sheet name
 
@@ -155,6 +155,16 @@ foreach ($dataListarrival as $arrival){
         "arr_fwe_time_zone" => $arrival["arr_fwe_time_zone"],
         "id_trv" => $voyage["id_trv"]
     ]);
+   
+
+    $sql = "INSERT INTO reports_arrival (".implode(",", array_keys($dataListarrival[$i])).") VALUES (:".implode(",:", array_keys($dataListarrival[$i])).")";
+
+    // $sql = "INSERT INTO reports_arrival (id_trv, arr_calltype, arr_comp_dcs_voy_number, arr_arrival_port, arr_eu_uk, arr_fwe_date, arr_fwe_local_time, arr_fwe_time_zone, arr_gps_trip, arr_speed_log, sosp_start_date, sosp_local_time, sosp_time_zone, sosp_gps_trip, sosp_speed_log, sosp_lsfo, sosp_ulsfo, sosp_mgo, sosp_lng_ctms, weath_force, weath_sea_state, weath_hours_wind, fg_boilers, fg_dfde1, fg_dfde2, fg_dfde3, fg_dfde4, fg_gcu, fg_vapour, eosp_date, oesp_local_time, oesp_time_zone, oesp_gps_trip, oesp_speed_log, oesp_lsfo, oesp_ulsfo, oesp_mgo, oesp_lng_ctms, fwe_lsfo, fwe_ulsfo, fwe_mgo, fwe_lng_ctms, fwe_lo, propulsion_stbd, propulsion_port, drift_total_distance, drift_time_adrift, anchor_date, anchor_local_time, anchor_time_zone, anchor_gps_trip, anchor_up_date, anchor_up_local_time, anchor_up_time_zone, anchor_up_gps_trip) 
+    //         VALUES (:id_trv, :arr_calltype, :arr_comp_dcs_voy_number, :arr_arrival_port, :arr_eu_uk, :arr_fwe_date, :arr_fwe_local_time, :arr_fwe_time_zone, :arr_gps_trip, :arr_speed_log, :sosp_start_date, :sosp_local_time, :sosp_time_zone, :sosp_gps_trip, :sosp_speed_log, :sosp_lsfo, :sosp_ulsfo, :sosp_mgo, :sosp_lng_ctms, :weath_force, :weath_sea_state, :weath_hours_wind, :fg_boilers, :fg_dfde1, :fg_dfde2, :fg_dfde3, :fg_dfde4, :fg_gcu, :fg_vapour, :eosp_date, :oesp_local_time, :oesp_time_zone, :oesp_gps_trip, :oesp_speed_log, :oesp_lsfo, :oesp_ulsfo, :oesp_mgo, :oes
+    // p_lng_ctms, :fwe_lsfo, :fwe_ulsfo, :fwe_mgo, :fwe_lng_ctms, :fwe_lo, :propulsion_stbd, :propulsion_port, :drift_total_distance, :drift_time_adrift, :anchor_date, :anchor_local_time, :anchor_time_zone, :anchor_gps_trip, :anchor_up_date, :anchor_up_local_time, :anchor_up_time_zone, :anchor_up_gps_trip)";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($dataListarrival[$i]);
+    echo "arrival insterted";
     //echo $arrival["arr_comp_dcs_voy_number"];
     print_r($voyage);
     echo "</pre>";  

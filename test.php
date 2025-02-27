@@ -1,24 +1,44 @@
 <?php
 
-function dateConvert($date)
-{
-    if (strlen($date) == 7) {
-        // Extract day, month, and year from the date string
-        $day = substr($date, 0, 1);
-        $month = substr($date, 1, 2);
-        $year = substr($date, 3, 4);
+require 'vendor/autoload.php';
 
-        // Format the date as YYYYMMDD
-        return $year . $month . str_pad($day, 2, '0', STR_PAD_LEFT);
-    } else {
-        if (strlen($date) == 8) {
-            $day = substr($date, 0, 2);
-            $month = substr($date, 2, 2);
-            $year = substr($date, 4, 4);
-            return $year.$month.$day;
-        }
-    }
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+
+
+$folder = "./departure"; // folder path
+$files = glob($folder . "/*.xlsm"); // get all file names in the folder
+$dataListarrival = []; // array to store all data
+$sheetName = "DEPARTURE"; // sheet name
+
+$host = "localhost";
+$db = "c2i";
+$user = "root";
+$pwd = "";
+$dsn = "mysql:host=$host;dbname=$db";
+$option = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+];
+
+try {
+    $pdo = new PDO($dsn, $user, $pwd, $option);
+} catch (PDOException $e) {
+    echo $e->getMessage();
 }
 
-$date = "19022025";
-echo dateConvert($date);
+
+$reader = new Xlsx();
+echo"1";
+$ports = [];
+$i=0;
+foreach ($files as $file) {
+    // Skip temporary or hidden files
+    if (strpos(basename($file), '~$') === 0) {
+        continue;
+    }
+    $spreadsheet = $reader->load($file); // Load the excel file
+    $sheet = $spreadsheet->getSheetByName($sheetName); // Get the sheet by name
+    $cellValue = $sheet->getCell('B7')->getValue(); // Get the value of cell J23
+    echo $cellValue."<br>";
+}

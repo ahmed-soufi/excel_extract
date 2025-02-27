@@ -7,7 +7,7 @@ use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
 $folder = "./departure"; // folder path
 
-$files = glob($folder . "/*.xlsx"); // get all file names in the folder
+$files = glob($folder . "/*.xlsm"); // get all file names in the folder
 
 $dataListvoyage = []; // array to store all data
 $datalistdeparture = [];
@@ -89,6 +89,7 @@ foreach ($files as $file) {
     $spreadsheet = $reader->load($file); // Load the excel file
     $sheet = $spreadsheet->getSheetByName($sheetName); // Get the sheet by name
     $data = [];
+    echo basename($file) . "<br>";
     foreach ($voyage as $key => $cell) {
         $data[$key] = $sheet->getCell($cell)->getValue();
     } // Get the cell value
@@ -96,7 +97,9 @@ foreach ($files as $file) {
     $data = [];
     foreach ($departure as $key => $cell) {
         $data[$key] = $sheet->getCell($cell)->getValue();
+        echo $key . "=>" . $data[$key] . "<br>";
     } // Get the cell value
+    echo "<br> ----------------------- <br>";
     $datalistdeparture[] = $data;
     $dataListvoyage[$i]["date_departure"] = dateConvert($dataListvoyage[$i]["date_departure"]);
     $datalistdeparture[$i]["depdata_date"] = dateConvert($datalistdeparture[$i]["depdata_date"]);
@@ -135,12 +138,26 @@ for ($i = 0; $i < count($dataListvoyage); $i++) {
     $sql = "select id_port from ports where code_port = :code_port";
     $stmt = $pdo->prepare($sql);
     $stmt->execute(["code_port" => $dataListvoyage[$i]["id_port_depart"]]);
+    if ($stmt->rowCount() == 0) {// if the port is not in the database
+        $sql = "INSERT INTO ports (code_port) VALUES (:code_port)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(["code_port" => $dataListvoyage[$i]["id_port_depart"]]);
+        $dataListvoyage[$i]["id_port_depart"] = $pdo->lastInsertId();
+    }else{
     $id_port_depart = $stmt->fetch()["id_port"];
     $dataListvoyage[$i]["id_port_depart"] = $id_port_depart;
-    //id port arrival
+    }//id port arrival
+    $sql = "select id_port from ports where code_port = :code_port";
+    $stmt = $pdo->prepare($sql);
     $stmt->execute(["code_port" => $dataListvoyage[$i]["id_port_arrival"]]);
+    if ($stmt->rowCount() == 0) {// if the port is not in the database
+        $sql = "INSERT INTO ports (code_port) VALUES (:code_port)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(["code_port" => $dataListvoyage[$i]["id_port_arrival"]]);
+        $dataListvoyage[$i]["id_port_arrival"] = $pdo->lastInsertId();
+    }else{
     $id_port_arrival = $stmt->fetch()["id_port"];
-    $dataListvoyage[$i]["id_port_arrival"] = $id_port_arrival;
+    $dataListvoyage[$i]["id_port_arrival"] = $id_port_arrival;}
     //voyaage insertion
     $sql = "INSERT INTO voyages (dcs_number, date_departure, time_departure, time_zone_departure, id_port_depart, id_port_arrival) VALUES (:dcs_number, :date_departure, :time_departure, :time_zone_departure, :id_port_depart, :id_port_arrival)";
     $stmt = $pdo->prepare($sql);
@@ -216,7 +233,7 @@ for ($i = 0; $i < count($datalistdeparture); $i++) {
     echo "</pre>";
     echo "<br>";
     //print_r($sql);
-    // $stmt = $pdo->prepare($sql);
-    // $stmt->execute($datalistdeparture[$i]);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($datalistdeparture[$i]);
 }
 
